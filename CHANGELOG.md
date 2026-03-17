@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/TheCryptoDonkey/spoken-token/compare/v1.0.3...v1.0.4) (2026-03-17)
+
+
+### Bug Fixes
+
+* document PIN encoding bias and clarify crypto guard expression ([734eca4](https://github.com/TheCryptoDonkey/spoken-token/commit/734eca4bbf8986830773647ef270f0b16107c6e1))
+
 ## [1.0.3](https://github.com/TheCryptoDonkey/spoken-token/compare/v1.0.2...v1.0.3) (2026-03-17)
 
 
