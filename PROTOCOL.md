@@ -3,7 +3,7 @@ Spoken Token Protocol
 
 Time-rotating human-speakable verification tokens from a shared secret.
 
-`v1.0` `stable`
+`v2.0` `stable`
 
 ## Abstract
 
@@ -149,13 +149,26 @@ are a valid output, not an error.
 
 #### PIN encoding
 
-The first `ceil(digits * 0.415)` bytes are interpreted as a big-endian unsigned
-integer, reduced modulo `10^digits`, and zero-padded to the specified length.
-The constant `0.415` approximates `log₁₀(256)` — the number of decimal digits
-per byte. This ensures enough bytes are consumed to fill the requested digit count.
+A pre-computed byte count per digit ensures max per-value modular bias stays
+below 1%. The required bytes are read as a big-endian unsigned integer, reduced
+modulo `10^digits`, and zero-padded to the specified length.
 
-The number of digits MUST be an integer in the range 1–10. For 9–10 digit PINs,
-implementations MUST use arbitrary-precision arithmetic to avoid 32-bit overflow.
+| Digits | Bytes | Max per-value bias |
+|--------|-------|--------------------|
+| 1 | 2 | < 0.1% |
+| 2 | 2 | < 0.1% |
+| 3 | 3 | < 0.01% |
+| 4 | 3 | < 0.1% |
+| 5 | 3 | < 1% |
+| 6 | 4 | < 0.1% |
+| 7 | 4 | < 0.2% |
+| 8 | 5 | < 0.01% |
+| 9 | 5 | < 0.1% |
+| 10 | 6 | < 0.01% |
+
+The number of digits MUST be an integer in the range 1–10. When the byte count
+exceeds 4, implementations MUST use arbitrary-precision arithmetic to avoid
+32-bit overflow.
 
 #### Hex encoding
 
@@ -192,16 +205,22 @@ parameter.
 
 For two-party verification where both sides need to speak a word (preventing the
 "echo problem" where the second speaker parrots the first), each role derives a
-distinct token using the context `namespace || 0x00 || role`:
+distinct token using the context `"pair" || 0x00 || namespace || 0x00 || role`:
 
 ```
-token_A = SPOKEN-DERIVE(secret, namespace + "\0" + role_A, counter)
-token_B = SPOKEN-DERIVE(secret, namespace + "\0" + role_B, counter)
+token_A = SPOKEN-DERIVE(secret, "pair\0" + namespace + "\0" + role_A, counter)
+token_B = SPOKEN-DERIVE(secret, "pair\0" + namespace + "\0" + role_B, counter)
 ```
 
-The null byte prevents ambiguity between namespace and role. Roles MUST be
-non-empty, distinct, and MUST NOT contain null bytes. The namespace MUST be
-non-empty and MUST NOT contain null bytes.
+The `"pair\0"` prefix provides cryptographic domain separation from identity-bound
+tokens (which use `context || 0x00 || identity`). Without the prefix, a directional
+pair for namespace X and role Y would produce the same HMAC input as an
+identity-bound token with context X and identity Y. The prefix makes the two
+namespaces independent.
+
+Null bytes separate the prefix, namespace, and role to prevent concatenation
+ambiguity. Roles MUST be non-empty, distinct, and MUST NOT contain null bytes.
+The namespace MUST be non-empty and MUST NOT contain null bytes.
 
 Neither token can be derived from the other without the shared secret.
 
@@ -264,7 +283,7 @@ SECRET_2 = ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 | 4 | deriveToken | SECRET_2 | `test` | 0 | — | 1 word | `carpet` |
 | 5 | deriveToken | SECRET_1 | `test` | 0 | — | 2 words | `jazz earth` |
 | 6 | deriveToken | SECRET_1 | `test` | 0 | — | 3 words | `jazz earth glacier` |
-| 7 | deriveToken | SECRET_1 | `test` | 0 | — | 6-digit PIN | `467218` |
+| 7 | deriveToken | SECRET_1 | `test` | 0 | — | 6-digit PIN | `607886` |
 | 8 | deriveToken | SECRET_1 | `test` | 0 | — | 8-char hex | `ec02d24e` |
 
 ### Identity binding
@@ -282,7 +301,7 @@ the group-wide token.
 
 | # | Secret | Namespace | Roles | Counter | Expected |
 |---|--------|-----------|-------|---------|----------|
-| 12 | SECRET_1 | `rideshare` | `["driver", "rider"]` | 42 | `{"driver": "insect", "rider": "turn"}` |
+| 12 | SECRET_1 | `rideshare` | `["driver", "rider"]` | 42 | `{"driver": "shed", "rider": "rely"}` |
 
 ### Round-trip verification
 
@@ -360,15 +379,22 @@ context suffixes.
 
 ## Versioning
 
-This document is versioned as `v1.0`. The version applies to:
+This document is versioned as `v2.0`. The version applies to:
 - The SPOKEN-DERIVE algorithm
 - The SPOKEN-ENCODE algorithm
 - The en-v1 wordlist
 - The test vectors
 
-A future `v2.0` would indicate a breaking change to the derivation or encoding
-algorithms. A new wordlist (e.g. `en-v2`, `de-v1`) does not require a protocol
-version change — implementations identify wordlists by name, not by protocol version.
+**v2.0 changes from v1.0:**
+- PIN encoding uses a per-digit-count byte lookup table (max bias < 1%) instead
+  of the `ceil(digits × 0.415)` formula (which had up to 40% bias at 7 digits).
+  PIN outputs differ from v1.0 for all digit counts except 5.
+- Directional pairs use a `"pair\0"` context prefix for cryptographic isolation
+  from identity-bound tokens. Directional pair outputs differ from v1.0.
+- Context strings, namespaces, and roles that are whitespace-only are now rejected.
+
+A new wordlist (e.g. `en-v2`, `de-v1`) does not require a protocol version
+change — implementations identify wordlists by name, not by protocol version.
 
 When two parties verify each other, they MUST agree on the protocol version and
 wordlist out of band (e.g. as part of the shared secret exchange). This specification
