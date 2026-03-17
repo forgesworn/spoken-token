@@ -1,20 +1,40 @@
 {
   "name": "spoken-token",
-  "version": "0.0.0-development",
+  "version": "1.0.0",
   "description": "TOTP but you say it out loud. Derive time-rotating, human-speakable verification tokens from a shared secret.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
-  "engines": { "node": ">=22" },
-  "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-    "./counter": { "types": "./dist/counter.d.ts", "import": "./dist/counter.js" },
-    "./wordlist": { "types": "./dist/wordlist.d.ts", "import": "./dist/wordlist.js" },
-    "./encoding": { "types": "./dist/encoding.d.ts", "import": "./dist/encoding.js" },
-    "./crypto": { "types": "./dist/crypto.d.ts", "import": "./dist/crypto.js" }
+  "engines": {
+    "node": ">=22"
   },
-  "files": ["dist/", "LICENSE"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./counter": {
+      "types": "./dist/counter.d.ts",
+      "import": "./dist/counter.js"
+    },
+    "./wordlist": {
+      "types": "./dist/wordlist.d.ts",
+      "import": "./dist/wordlist.js"
+    },
+    "./encoding": {
+      "types": "./dist/encoding.d.ts",
+      "import": "./dist/encoding.js"
+    },
+    "./crypto": {
+      "types": "./dist/crypto.d.ts",
+      "import": "./dist/crypto.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
@@ -24,13 +44,24 @@
     "lint:fix": "eslint src/ --fix"
   },
   "keywords": [
-    "totp", "verification", "spoken-word", "token", "hmac",
-    "verbal-verification", "rideshare", "phone-auth", "offline-first",
-    "zero-dependency", "wordlist"
+    "totp",
+    "verification",
+    "spoken-word",
+    "token",
+    "hmac",
+    "verbal-verification",
+    "rideshare",
+    "phone-auth",
+    "offline-first",
+    "zero-dependency",
+    "wordlist"
   ],
   "author": "TheCryptoDonkey",
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/TheCryptoDonkey/spoken-token.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TheCryptoDonkey/spoken-token.git"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.0.3",
