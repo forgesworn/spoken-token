@@ -268,6 +268,7 @@ export const WORDLIST: readonly string[] = [
   'yellow', 'you', 'young', 'youth', 'zebra', 'zero', 'zone', 'zoo',
 
 ] as const
+Object.freeze(WORDLIST)
 
 export const WORDLIST_SIZE = 2048
 

@@ -50,6 +50,9 @@ export function verifyToken(
 ): VerifyResult {
   const encoding = options?.encoding ?? DEFAULT_ENCODING
   const tolerance = options?.tolerance ?? 0
+  if (!Number.isInteger(counter) || counter < 0 || counter > 0xFFFFFFFF) {
+    throw new RangeError(`Counter must be an integer 0–${0xFFFFFFFF}, got ${counter}`)
+  }
   if (!Number.isInteger(tolerance) || tolerance < 0) {
     throw new RangeError('Tolerance must be a non-negative integer')
   }

@@ -201,7 +201,9 @@ export function hmacSha256(key: Uint8Array, data: Uint8Array): Uint8Array {
 export function randomSeed(): string {
   const bytes = new Uint8Array(32)
   crypto.getRandomValues(bytes)
-  return bytesToHex(bytes)
+  const hex = bytesToHex(bytes)
+  bytes.fill(0) // best-effort zeroing of key material
+  return hex
 }
 
 // ---------------------------------------------------------------------------

@@ -24,22 +24,11 @@ function normaliseSecret(secret: Uint8Array | string): Uint8Array {
 }
 
 /**
- * Derive raw token bytes from a shared secret, context, and counter.
- *
- * Without identity: `HMAC-SHA256(secret, utf8(context) || counter_be32)`
- * With identity:    `HMAC-SHA256(secret, utf8(context) || 0x00 || utf8(identity) || counter_be32)`
- *
- * The null-byte separator prevents concatenation ambiguity between context and identity.
- *
- * @param secret - Shared secret (hex string or Uint8Array, minimum 16 bytes).
- * @param context - Context string for domain separation.
- * @param counter - Time-based or usage counter (uint32).
- * @param identity - Optional member identifier for per-member tokens.
- * @returns Raw 32-byte HMAC-SHA256 digest.
- * @throws {RangeError} If secret is too short or counter is out of range.
- * @throws {Error} If identity is provided but empty.
+ * Internal derivation — no context null-byte validation.
+ * Used by deriveDirectionalPair which constructs context strings containing
+ * a protocol-defined null-byte separator (namespace\0role).
  */
-export function deriveTokenBytes(
+function deriveTokenBytesInternal(
   secret: Uint8Array | string,
   context: string,
   counter: number,
@@ -59,6 +48,34 @@ export function deriveTokenBytes(
     ? concatBytes(utf8(context), new Uint8Array([0x00]), utf8(identity), counterBe32(counter))
     : concatBytes(utf8(context), counterBe32(counter))
   return hmacSha256(key, data)
+}
+
+/**
+ * Derive raw token bytes from a shared secret, context, and counter.
+ *
+ * Without identity: `HMAC-SHA256(secret, utf8(context) || counter_be32)`
+ * With identity:    `HMAC-SHA256(secret, utf8(context) || 0x00 || utf8(identity) || counter_be32)`
+ *
+ * The null-byte separator prevents concatenation ambiguity between context and identity.
+ *
+ * @param secret - Shared secret (hex string or Uint8Array, minimum 16 bytes).
+ * @param context - Context string for domain separation (must not contain null bytes).
+ * @param counter - Time-based or usage counter (uint32).
+ * @param identity - Optional member identifier for per-member tokens.
+ * @returns Raw 32-byte HMAC-SHA256 digest.
+ * @throws {RangeError} If secret is too short or counter is out of range.
+ * @throws {Error} If context contains null bytes or identity is provided but empty.
+ */
+export function deriveTokenBytes(
+  secret: Uint8Array | string,
+  context: string,
+  counter: number,
+  identity?: string,
+): Uint8Array {
+  if (context.includes('\0')) {
+    throw new Error('context must not contain null bytes')
+  }
+  return deriveTokenBytesInternal(secret, context, counter, identity)
 }
 
 /**
@@ -134,7 +151,7 @@ export function deriveDirectionalPair(
   // Calls deriveTokenBytes directly — the constructed context intentionally
   // contains a null byte as the protocol-defined separator.
   return {
-    [roles[0]]: encodeToken(deriveTokenBytes(secret, `${namespace}\0${roles[0]}`, counter), encoding),
-    [roles[1]]: encodeToken(deriveTokenBytes(secret, `${namespace}\0${roles[1]}`, counter), encoding),
+    [roles[0]]: encodeToken(deriveTokenBytesInternal(secret, `${namespace}\0${roles[0]}`, counter), encoding),
+    [roles[1]]: encodeToken(deriveTokenBytesInternal(secret, `${namespace}\0${roles[1]}`, counter), encoding),
   }
 }

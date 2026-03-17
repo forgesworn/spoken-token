@@ -49,7 +49,8 @@ export function encodeAsWords(
 export function encodeAsPin(bytes: Uint8Array, digits: number = 4): string {
   if (!Number.isInteger(digits) || digits < 1 || digits > 10) throw new RangeError('PIN digits must be an integer 1–10')
   if (bytes.length === 0) throw new RangeError('Cannot encode empty byte array as PIN')
-  const needed = Math.min(Math.ceil(digits * 0.415), bytes.length)
+  const needed = Math.ceil(digits * 0.415)
+  if (bytes.length < needed) throw new RangeError(`Not enough bytes for ${digits}-digit PIN: need ${needed}, got ${bytes.length}`)
   const mod = Math.pow(10, digits)
 
   // Use BigInt accumulation for 9–10 digits to avoid 32-bit overflow in >>> 0
