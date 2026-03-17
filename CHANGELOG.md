@@ -1,3 +1,11 @@
+## [1.0.3](https://github.com/TheCryptoDonkey/spoken-token/compare/v1.0.2...v1.0.3) (2026-03-17)
+
+
+### Bug Fixes
+
+* add runtime exhaustive check and input validation gaps ([f507463](https://github.com/TheCryptoDonkey/spoken-token/commit/f507463bc5084d66747585fc2d66cc0fa8ecbcc3))
+* add workflow-level read-only permissions default ([8d6c394](https://github.com/TheCryptoDonkey/spoken-token/commit/8d6c39451c243c82248c8c54702d14a142e1db21))
+
 ## [1.0.2](https://github.com/TheCryptoDonkey/spoken-token/compare/v1.0.1...v1.0.2) (2026-03-17)
 
 
