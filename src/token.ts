@@ -148,7 +148,7 @@ export function deriveDirectionalPair(
   }
   // Null-byte separator prevents concatenation ambiguity
   // (e.g. namespace "a:b" + role "c" vs namespace "a" + role "b:c")
-  // Calls deriveTokenBytes directly — the constructed context intentionally
+  // Calls deriveTokenBytesInternal directly — the constructed context intentionally
   // contains a null byte as the protocol-defined separator.
   return {
     [roles[0]]: encodeToken(deriveTokenBytesInternal(secret, `${namespace}\0${roles[0]}`, counter), encoding),

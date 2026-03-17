@@ -45,6 +45,7 @@ export function getCounter(
  * @returns Unsigned 32-bit integer derived from SHA-256 of the event ID.
  */
 export function counterFromEventId(eventId: string): number {
+  if (!eventId) throw new RangeError('eventId must be a non-empty string')
   const hash = sha256(new TextEncoder().encode(eventId))
   // Read first 4 bytes as unsigned 32-bit big-endian integer
   return (hash[0] << 24 | hash[1] << 16 | hash[2] << 8 | hash[3]) >>> 0

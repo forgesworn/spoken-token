@@ -103,5 +103,7 @@ export function encodeToken(bytes: Uint8Array, encoding: TokenEncoding = DEFAULT
       return encodeAsPin(bytes, encoding.digits ?? 4)
     case 'hex':
       return encodeAsHex(bytes, encoding.length ?? 8)
+    default:
+      throw new Error(`Unsupported encoding format: ${(encoding as { format: string }).format}`)
   }
 }
