@@ -37,17 +37,16 @@ export function encodeAsWords(
 }
 
 /**
+ * Minimum bytes per digit count to keep max per-value bias below 1%.
+ * Computed as: smallest b where `floor(2^(b×8) / 10^digits) >= 100`.
+ * Index 0 is unused; indices 1–10 correspond to digit counts 1–10.
+ */
+const PIN_BYTES: readonly number[] = [0, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6]
+
+/**
  * Encode raw bytes as a numeric PIN with leading zeros.
- * Uses the first ceil(digits * 0.415) bytes, interpreted as a big-endian
- * integer, reduced modulo 10^digits.
- *
- * **Bias note:** The byte-count formula allocates `ceil(digits × 0.415)` bytes.
- * Modular reduction introduces bias where `2^(bytes×8) mod 10^digits ≠ 0`:
- * 4 digits (~8.4%), 5 digits (~0.46%), 6 digits (~4.6%),
- * **7 digits (~40% — severe)**, 8 digits (~2.2%), 10 digits (~0.87%).
- * For spoken verification tokens (short-lived, attacker lacks byte source),
- * this is generally acceptable. If uniform distribution is critical,
- * use word encoding instead.
+ * Uses a pre-computed byte count per digit to keep modular bias below 1%,
+ * interpreted as a big-endian integer, reduced modulo 10^digits.
  *
  * @param bytes - Raw bytes to encode (must be non-empty).
  * @param digits - Number of PIN digits to produce (integer 1-10, default: 4).
@@ -57,12 +56,12 @@ export function encodeAsWords(
 export function encodeAsPin(bytes: Uint8Array, digits: number = 4): string {
   if (!Number.isInteger(digits) || digits < 1 || digits > 10) throw new RangeError('PIN digits must be an integer 1–10')
   if (bytes.length === 0) throw new RangeError('Cannot encode empty byte array as PIN')
-  const needed = Math.ceil(digits * 0.415)
+  const needed = PIN_BYTES[digits]
   if (bytes.length < needed) throw new RangeError(`Not enough bytes for ${digits}-digit PIN: need ${needed}, got ${bytes.length}`)
   const mod = Math.pow(10, digits)
 
-  // Use BigInt accumulation for 9–10 digits to avoid 32-bit overflow in >>> 0
-  if (digits >= 9) {
+  // Use BigInt accumulation when byte count exceeds 4 to avoid 32-bit overflow in >>> 0
+  if (needed > 4) {
     let bigVal = 0n
     for (let i = 0; i < needed; i++) bigVal = bigVal * 256n + BigInt(bytes[i])
     return (Number(bigVal % BigInt(mod))).toString().padStart(digits, '0')

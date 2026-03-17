@@ -33,6 +33,12 @@ export interface VerifyOptions {
  * 3. Group-wide token (no identity) across tolerance window
  * 4. No match → invalid
  *
+ * **Identity collision note:** With low-entropy encodings (single word = 2048
+ * values), different identities may produce the same token at the same counter.
+ * For 100 identities, collision probability is ~2.4% per counter. When a
+ * collision occurs, the first matching identity in the array wins. Use
+ * multi-word or PIN encoding for reliable identity attribution with large groups.
+ *
  * @param secret - Shared secret (hex string or Uint8Array).
  * @param context - Context string for domain separation.
  * @param counter - Current time-based counter.

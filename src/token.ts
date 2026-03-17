@@ -34,7 +34,7 @@ function deriveTokenBytesInternal(
   counter: number,
   identity?: string,
 ): Uint8Array {
-  if (!context) {
+  if (!context || !context.trim()) {
     throw new Error('context must be a non-empty string')
   }
   if (identity !== undefined && identity === '') {
@@ -131,13 +131,13 @@ export function deriveDirectionalPair(
   counter: number,
   encoding: TokenEncoding = DEFAULT_ENCODING,
 ): DirectionalPair {
-  if (!namespace) {
+  if (!namespace || !namespace.trim()) {
     throw new Error('namespace must be a non-empty string')
   }
   if (namespace.includes('\0')) {
     throw new Error('namespace must not contain null bytes')
   }
-  if (!roles[0] || !roles[1]) {
+  if (!roles[0] || !roles[1] || !roles[0].trim() || !roles[1].trim()) {
     throw new Error('Both roles must be non-empty strings')
   }
   if (roles[0].includes('\0') || roles[1].includes('\0')) {
@@ -146,18 +146,12 @@ export function deriveDirectionalPair(
   if (roles[0] === roles[1]) {
     throw new Error(`Roles must be distinct, got ["${roles[0]}", "${roles[1]}"]`)
   }
-  // Null-byte separator prevents concatenation ambiguity
-  // (e.g. namespace "a:b" + role "c" vs namespace "a" + role "b:c")
-  // Calls deriveTokenBytesInternal directly — the constructed context intentionally
-  // contains a null byte as the protocol-defined separator.
-  //
-  // Design note: the HMAC input `utf8(namespace\0role) || counter_be32` is byte-identical
-  // to an identity-bound derivation `deriveTokenBytes(secret, namespace, counter, role)`.
-  // This is intentional — both require the same shared secret, so cross-domain equivalence
-  // does not weaken security. Consumers should use distinct namespaces/contexts to avoid
-  // accidental overlap between directional-pair and identity-bound tokens.
+  // "pair\0" prefix provides cryptographic domain separation from identity-bound
+  // tokens, which use context\0identity. Without this prefix, deriveDirectionalPair
+  // for namespace=X, role=Y would produce the same HMAC input as deriveTokenBytes
+  // with context=X, identity=Y. The prefix makes the two namespaces independent.
   return {
-    [roles[0]]: encodeToken(deriveTokenBytesInternal(secret, `${namespace}\0${roles[0]}`, counter), encoding),
-    [roles[1]]: encodeToken(deriveTokenBytesInternal(secret, `${namespace}\0${roles[1]}`, counter), encoding),
+    [roles[0]]: encodeToken(deriveTokenBytesInternal(secret, `pair\0${namespace}\0${roles[0]}`, counter), encoding),
+    [roles[1]]: encodeToken(deriveTokenBytesInternal(secret, `pair\0${namespace}\0${roles[1]}`, counter), encoding),
   }
 }

@@ -44,51 +44,28 @@ describe('encodeAsWords', () => {
 })
 
 describe('encodeAsPin bias', () => {
-  it('10-digit PIN has minor bias (~0.87%)', () => {
-    // For 10 digits we use 5 bytes (40 bits, max value 2^40 - 1 = 1,099,511,627,775)
-    // 10^10 = 10,000,000,000. 2^40 / 10^10 ≈ 109.95, so bias exists.
-    // Bias ratio: (2^40 mod 10^10) / 2^40 = 9,511,627,776 / 1,099,511,627,776 ≈ 0.87%
-    // This is a known minor bias at 10 digits — document but accept.
-    const bytes = new Uint8Array(32)
+  // PIN_BYTES lookup table: [0, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6]
+  // All digit counts have max per-value bias (ceil/floor ratio - 1) < 1%.
+  it('all digit counts have per-value bias below 1%', () => {
+    const pinBytes = [0, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6]
+    for (let d = 1; d <= 10; d++) {
+      const maxVal = 2 ** (pinBytes[d] * 8)
+      const mod = 10 ** d
+      const floor = Math.floor(maxVal / mod)
+      const ratio = (floor + 1) / floor
+      expect(ratio - 1).toBeLessThan(0.01)
+    }
+  })
 
-    // Verify we can at least generate all PIN values without error
+  it('10-digit PIN works with 6 bytes', () => {
+    const bytes = new Uint8Array(32)
     bytes[0] = 0x00
     const minPin = encodeAsPin(bytes, 10)
     expect(minPin).toHaveLength(10)
 
-    // 10-digit PIN should always be within range
     bytes.fill(0xff)
     const maxPin = encodeAsPin(bytes, 10)
     expect(Number(maxPin)).toBeLessThan(10_000_000_000)
-  })
-
-  // Characterise modular bias for each digit count.
-  // Formula: bytes_needed = ceil(digits * 0.415), max_val = 2^(bytes*8), bias = (max_val % 10^digits) / max_val
-  // 4 digits: 2 bytes, bias ~8.4%
-  // 5 digits: 3 bytes, bias ~0.46%
-  // 6 digits: 3 bytes, bias ~4.6%
-  // 7 digits: 3 bytes, bias ~40.4% (severe — some values nearly 2× as likely)
-  // 8 digits: 4 bytes, bias ~2.2%
-  // 9 digits: 4 bytes (BigInt), bias ~6.9%
-  // 10 digits: 5 bytes (BigInt), bias ~0.87%
-  it('4-digit PIN bias is moderate (~8.4%)', () => {
-    // 2 bytes: 65536 % 10000 = 5536, bias = 5536/65536 ≈ 8.4%
-    // Values 0-5535 have 7 representatives, values 5536-9999 have 6.
-    // For a spoken verification token this is acceptable — the token is
-    // short-lived and the attacker doesn't know the byte source.
-    const maxVal = 2 ** 16
-    const mod = 10 ** 4
-    const bias = (maxVal % mod) / maxVal
-    expect(bias).toBeLessThan(0.1) // < 10%
-    expect(bias).toBeGreaterThan(0.08) // ~8.4%
-  })
-
-  it('7-digit PIN has severe bias (~40%)', () => {
-    // 3 bytes: 16777216 % 10000000 = 6777216, bias ≈ 40.4%
-    const maxVal = 2 ** 24
-    const mod = 10 ** 7
-    const bias = (maxVal % mod) / maxVal
-    expect(bias).toBeGreaterThan(0.4)
   })
 })
 
@@ -117,18 +94,18 @@ describe('encodeAsPin', () => {
   })
 
   it('encodes 9-digit PIN correctly', () => {
-    const bytes = new Uint8Array([0xff, 0xff, 0xff, 0xff])
+    const bytes = new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff])
     const pin = encodeAsPin(bytes, 9)
     expect(pin).toHaveLength(9)
     expect(pin).toMatch(/^\d{9}$/)
   })
 
   it('encodes 10-digit PIN with values above 2^32', () => {
-    // 5 bytes all 0xff = 1,099,511,627,775 — mod 10^10 = 9,511,627,775
-    const bytes = new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff])
+    // 6 bytes all 0xff = 281,474,976,710,655 — mod 10^10 = 4,976,710,655
+    const bytes = new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff])
     const pin = encodeAsPin(bytes, 10)
     expect(pin).toHaveLength(10)
-    expect(pin).toBe('9511627775')
+    expect(pin).toBe('4976710655')
   })
 
   it('throws on digits > 10', () => {

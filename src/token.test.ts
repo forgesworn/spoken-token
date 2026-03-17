@@ -26,8 +26,8 @@ describe('protocol compatibility vectors', () => {
   })
 
   // U-04: PIN encoding
-  it('U-04: deriveToken(SECRET_1, dispatch:handoff, 0, pin 4-digit) → "2818"', () => {
-    expect(deriveToken(SECRET_1, 'dispatch:handoff', 0, { format: 'pin', digits: 4 })).toBe('2818')
+  it('U-04: deriveToken(SECRET_1, dispatch:handoff, 0, pin 4-digit) → "1429"', () => {
+    expect(deriveToken(SECRET_1, 'dispatch:handoff', 0, { format: 'pin', digits: 4 })).toBe('1429')
   })
 
   // U-05: 3-word phrase
@@ -102,6 +102,11 @@ describe('deriveTokenBytes', () => {
 
   it('throws on empty context string', () => {
     expect(() => deriveTokenBytes(SECRET_1, '', 0)).toThrow('context must be a non-empty string')
+  })
+
+  it('throws on whitespace-only context string', () => {
+    expect(() => deriveTokenBytes(SECRET_1, '   ', 0)).toThrow('context must be a non-empty string')
+    expect(() => deriveTokenBytes(SECRET_1, '\t', 0)).toThrow('context must be a non-empty string')
   })
 
   it('throws on identity containing null bytes', () => {
@@ -211,18 +216,16 @@ describe('deriveDirectionalPair equivalence', () => {
 
   it('U-13: deriveDirectionalPair(SECRET_1, aviva, [caller, agent], 0) pinned values', () => {
     const pair = deriveDirectionalPair(SECRET_1, 'aviva', ['caller', 'agent'], 0)
-    expect(pair.caller).toBe('receive')
-    expect(pair.agent).toBe('coyote')
+    expect(pair.caller).toBe('inject')
+    expect(pair.agent).toBe('steak')
   })
 
-  // Document the design equivalence: directional pair for namespace=X, role=Y
-  // produces the same token as identity-bound derivation with context=X, identity=Y.
-  // Both compute HMAC(secret, utf8("X\0Y") || counter_be32). This is by design —
-  // both require the same secret, so equivalence does not weaken security.
-  it('directional pair token equals identity-bound token (design equivalence)', () => {
+  // Verify that directional pair tokens are cryptographically isolated from
+  // identity-bound tokens — the "pair\0" prefix ensures different HMAC inputs.
+  it('directional pair token differs from identity-bound token (domain separation)', () => {
     const pair = deriveDirectionalPair(SECRET_1, 'ns', ['roleA', 'roleB'], 0)
     const identityToken = deriveToken(SECRET_1, 'ns', 0, undefined, 'roleA')
-    expect(pair.roleA).toBe(identityToken)
+    expect(pair.roleA).not.toBe(identityToken)
   })
 })
 
@@ -289,6 +292,14 @@ describe('deriveDirectionalPair', () => {
 
   it('throws on empty second role', () => {
     expect(() => deriveDirectionalPair(SECRET_1, 'ns', ['caller', ''], 0)).toThrow('Both roles must be non-empty strings')
+  })
+
+  it('throws on whitespace-only namespace', () => {
+    expect(() => deriveDirectionalPair(SECRET_1, '  ', ['caller', 'agent'], 0)).toThrow('namespace must be a non-empty string')
+  })
+
+  it('throws on whitespace-only role', () => {
+    expect(() => deriveDirectionalPair(SECRET_1, 'ns', ['  ', 'agent'], 0)).toThrow('Both roles must be non-empty strings')
   })
 
   it('throws on role containing null byte', () => {
