@@ -49,12 +49,17 @@
     "spoken-word",
     "token",
     "hmac",
+    "authentication",
+    "security",
+    "crypto",
+    "identity",
     "verbal-verification",
     "rideshare",
     "phone-auth",
     "offline-first",
     "zero-dependency",
-    "wordlist"
+    "wordlist",
+    "typescript"
   ],
   "author": "TheCryptoDonkey",
   "license": "MIT",

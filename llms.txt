@@ -1,0 +1,54 @@
+# spoken-token
+
+> Verifying someone's identity over a phone call, at a door, or during a handoff
+> requires something you can say out loud — not a 6-digit code on a screen.
+> spoken-token derives time-rotating, human-speakable verification tokens from a
+> shared secret. Like TOTP, but optimised for the human voice.
+
+spoken-token is a zero-dependency TypeScript library for developers building
+identity verification into rideshare apps, phone auth systems, courier handoffs,
+or any scenario where two parties need to confirm each other verbally. Both sides
+derive the same word (or phrase, PIN, hex code) from a shared secret without
+transmitting it. The 2048-word English wordlist is curated for spoken clarity —
+no homophones, no phonetic near-collisions, 3-8 characters each.
+
+Works in Node.js and the browser. ESM-only.
+
+## Getting Started
+
+```
+npm install spoken-token
+```
+
+```typescript
+import { deriveToken, getCounter } from 'spoken-token'
+
+// Both parties derive the same word from the shared secret
+const counter = getCounter(Date.now() / 1000)  // rotates every 7 days
+const word = deriveToken(sharedSecret, 'rideshare:pickup', counter)
+// => 'carbon'
+```
+
+## Key Concepts
+
+- **Token derivation** — `HMAC-SHA256(secret, context || counter)` truncated and encoded as a word, PIN, or hex string.
+- **Counter** — derived from wall-clock time divided by a rotation interval (default: 7 days). Both parties compute the same value independently.
+- **Context** — a domain-separation string (e.g. `'rideshare:pickup'`) that ensures tokens for different purposes never collide.
+- **Directional pairs** — two distinct tokens from one secret, one per role (e.g. caller/agent), preventing the echo problem where one party parrots the other.
+- **Tolerance window** — accept tokens from adjacent counter steps (default: 0, max: 10) to absorb clock skew.
+
+## API Surface
+
+- `deriveToken(secret, context, counter, encoding?, identity?)` — derive an encoded token string (word, PIN, or hex)
+- `verifyToken(secret, context, counter, input, identities?, options?)` — verify a spoken token with tolerance window and optional per-identity matching
+- `deriveDirectionalPair(secret, namespace, roles, counter, encoding?)` — derive two distinct role-keyed tokens from one secret
+- `getCounter(timestampSec, rotationIntervalSec?)` — compute time-based counter (default interval: 7 days)
+- `counterFromEventId(eventId)` — deterministic counter from an event identifier via SHA-256
+
+Encoding options: `{ format: 'words', count: 1 }` (default), `{ format: 'pin', digits: 4 }`, `{ format: 'hex', length: 8 }`.
+
+## Optional
+
+- [README](https://github.com/TheCryptoDonkey/spoken-token/blob/main/README.md): full API reference with examples
+- [PROTOCOL.md](https://github.com/TheCryptoDonkey/spoken-token/blob/main/PROTOCOL.md): formal protocol specification
+- [canary-kit](https://github.com/TheCryptoDonkey/canary-kit): extends spoken-token with duress signalling, liveness monitoring, and Nostr transport
