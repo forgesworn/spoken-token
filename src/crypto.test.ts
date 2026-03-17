@@ -72,6 +72,14 @@ describe('readUint16BE', () => {
   it('throws on negative offset (security audit)', () => {
     expect(() => readUint16BE(new Uint8Array([0x01, 0x02]), -1)).toThrow(RangeError)
   })
+
+  it('throws on NaN offset', () => {
+    expect(() => readUint16BE(new Uint8Array([0x01, 0x02, 0x03]), NaN)).toThrow(RangeError)
+  })
+
+  it('throws on fractional offset', () => {
+    expect(() => readUint16BE(new Uint8Array([0x01, 0x02, 0x03]), 0.5)).toThrow(RangeError)
+  })
 })
 
 describe('sha256', () => {

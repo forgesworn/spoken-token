@@ -169,16 +169,20 @@ export function hmacSha256(key: Uint8Array, data: Uint8Array): Uint8Array {
   }
 
   // inner = sha256(ipad || data)
-  const inner = sha256(concatBytes(ipad, data))
+  const innerData = concatBytes(ipad, data)
+  const inner = sha256(innerData)
 
   // outer = sha256(opad || inner)
-  const result = sha256(concatBytes(opad, inner))
+  const outerData = concatBytes(opad, inner)
+  const result = sha256(outerData)
 
   // Best-effort zeroing of key material and intermediate state
   k.fill(0)
   ipad.fill(0)
   opad.fill(0)
   inner.fill(0)
+  innerData.fill(0)
+  outerData.fill(0)
   if (normalised !== key) normalised.fill(0) // zero hashed key if we created a new buffer
 
   return result
@@ -249,7 +253,7 @@ export function bytesToHex(bytes: Uint8Array): string {
  * @throws {RangeError} If offset is out of bounds.
  */
 export function readUint16BE(bytes: Uint8Array, offset: number): number {
-  if (offset < 0 || offset + 1 >= bytes.length) throw new RangeError(`readUint16BE: offset ${offset} out of bounds for length ${bytes.length}`)
+  if (!Number.isInteger(offset) || offset < 0 || offset + 1 >= bytes.length) throw new RangeError(`readUint16BE: offset ${offset} out of bounds for length ${bytes.length}`)
   return ((bytes[offset] << 8) | bytes[offset + 1]) >>> 0
 }
 
