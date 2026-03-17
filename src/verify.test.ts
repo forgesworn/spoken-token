@@ -203,6 +203,14 @@ describe('identity limit', () => {
   it('throws on identity containing null bytes', () => {
     expect(() => verifyToken(SECRET, CTX, COUNTER, 'word', ['alice', 'a\0b'])).toThrow('identities must not contain null bytes')
   })
+
+  it('throws on empty string in identities array', () => {
+    expect(() => verifyToken(SECRET, CTX, COUNTER, 'word', ['alice', ''])).toThrow('identities must be non-empty strings')
+  })
+
+  it('throws on whitespace-only identity in identities array', () => {
+    expect(() => verifyToken(SECRET, CTX, COUNTER, 'word', ['alice', '   '])).toThrow('identities must be non-empty strings')
+  })
 })
 
 // ─── Multiple identities ─────────────────────────────────────────────────────
@@ -263,6 +271,21 @@ describe('tolerance boundary clamping', () => {
     const token = deriveToken(SECRET, CTX, 0xFFFFFFFF)
     const result = verifyToken(SECRET, CTX, 0xFFFFFFFF, token, undefined, { tolerance: 5 })
     expect(result).toEqual({ status: 'valid' })
+  })
+})
+
+// ─── Context validation ─────────────────────────────────────────────────────
+describe('context validation', () => {
+  it('throws on empty context', () => {
+    expect(() => verifyToken(SECRET, '', COUNTER, 'word')).toThrow('context must be a non-empty string')
+  })
+
+  it('throws on whitespace-only context', () => {
+    expect(() => verifyToken(SECRET, '   ', COUNTER, 'word')).toThrow('context must be a non-empty string')
+  })
+
+  it('throws on context containing null bytes', () => {
+    expect(() => verifyToken(SECRET, 'a\0b', COUNTER, 'word')).toThrow('context must not contain null bytes')
   })
 })
 

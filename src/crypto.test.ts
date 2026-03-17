@@ -53,6 +53,10 @@ describe('hexToBytes', () => {
     expect(hexToBytes('0102ff')).toEqual(new Uint8Array([1, 2, 255]))
   })
 
+  it('returns empty Uint8Array for empty string', () => {
+    expect(hexToBytes('')).toEqual(new Uint8Array([]))
+  })
+
   it('throws on odd-length hex', () => {
     expect(() => hexToBytes('abc')).toThrow()
   })
@@ -121,6 +125,14 @@ describe('sha256', () => {
     const input = new Uint8Array(128).fill(0x61) // 128 × 'a'
     const hash = bytesToHex(sha256(input))
     expect(hash).toBe('6836cf13bac400e9105071cd6af47084dfacad4e5e302c94bfed24e013afb73e')
+  })
+
+  it('NIST two-block test vector (FIPS 180-4)', () => {
+    const input = new TextEncoder().encode(
+      'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq',
+    )
+    const hash = bytesToHex(sha256(input))
+    expect(hash).toBe('248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1')
   })
 })
 
@@ -197,6 +209,14 @@ describe('hmacSha256', () => {
     const data = new TextEncoder().encode('Test Using Larger Than Block-Size Key - Hash Key First')
     const mac = bytesToHex(hmacSha256(key, data))
     expect(mac).toBe('60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54')
+  })
+
+  // HMAC with empty data — exercises ipad-only inner hash
+  it('produces correct HMAC with empty data', () => {
+    const key = new Uint8Array(20).fill(0x0b)
+    const mac = bytesToHex(hmacSha256(key, new Uint8Array(0)))
+    // Cross-validated: matches Node.js crypto.createHmac('sha256', Buffer.alloc(20, 0x0b)).update('').digest('hex')
+    expect(mac).toBe('999a901219f032cd497cadb5e6051e97b6a29ab297bd6ae722bd6062a2f59542')
   })
 
   // RFC 4231 Test Case 7 — key longer than block size, longer data

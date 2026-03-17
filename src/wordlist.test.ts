@@ -36,6 +36,14 @@ describe('wordlist', () => {
     expect(() => getWord(2048)).toThrow()
   })
 
+  it('getWord throws for NaN index', () => {
+    expect(() => getWord(NaN)).toThrow(RangeError)
+  })
+
+  it('getWord throws for fractional index', () => {
+    expect(() => getWord(0.5)).toThrow(RangeError)
+  })
+
   it('indexOf returns correct index', () => {
     expect(indexOf(WORDLIST[0])).toBe(0)
     expect(indexOf(WORDLIST[100])).toBe(100)

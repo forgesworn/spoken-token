@@ -38,7 +38,8 @@ export function encodeAsWords(
 
 /**
  * Minimum bytes per digit count to keep max per-value bias below 1%.
- * Computed as: smallest b where `floor(2^(b×8) / 10^digits) >= 100`.
+ * Each entry is the smallest b where `floor(2^(b×8) / 10^digits) >= 100`,
+ * except d=10 which uses b=6 (not b=5) for a tighter 0.004% bias.
  * Index 0 is unused; indices 1–10 correspond to digit counts 1–10.
  */
 const PIN_BYTES: readonly number[] = [0, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6]

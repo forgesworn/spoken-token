@@ -97,7 +97,20 @@ describe('deriveTokenBytes', () => {
   })
 
   it('empty identity throws', () => {
-    expect(() => deriveTokenBytes(SECRET_1, 'test', 0, '')).toThrow('identity must be non-empty when provided')
+    expect(() => deriveTokenBytes(SECRET_1, 'test', 0, '')).toThrow('identity must be a non-empty string when provided')
+  })
+
+  it('whitespace-only identity throws', () => {
+    expect(() => deriveTokenBytes(SECRET_1, 'test', 0, '   ')).toThrow('identity must be a non-empty string when provided')
+    expect(() => deriveTokenBytes(SECRET_1, 'test', 0, '\t')).toThrow('identity must be a non-empty string when provided')
+  })
+
+  it('throws on NaN counter', () => {
+    expect(() => deriveTokenBytes(SECRET_1, 'test', NaN)).toThrow(RangeError)
+  })
+
+  it('throws on Infinity counter', () => {
+    expect(() => deriveTokenBytes(SECRET_1, 'test', Infinity)).toThrow(RangeError)
   })
 
   it('throws on empty context string', () => {

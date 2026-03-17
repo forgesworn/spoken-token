@@ -286,8 +286,8 @@ for (let i = 0; i < WORDLIST.length; i++) {
  * @throws {RangeError} If index is outside 0-2047.
  */
 export function getWord(index: number): string {
-  if (index < 0 || index >= WORDLIST_SIZE) {
-    throw new RangeError(`Wordlist index out of range: ${index} (must be 0-${WORDLIST_SIZE - 1})`)
+  if (!Number.isInteger(index) || index < 0 || index >= WORDLIST_SIZE) {
+    throw new RangeError(`Wordlist index out of range: ${index} (must be an integer 0-${WORDLIST_SIZE - 1})`)
   }
   return WORDLIST[index]
 }
