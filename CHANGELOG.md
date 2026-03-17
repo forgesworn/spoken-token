@@ -1,3 +1,12 @@
+## [2.0.1](https://github.com/TheCryptoDonkey/spoken-token/compare/v2.0.0...v2.0.1) (2026-03-17)
+
+
+### Bug Fixes
+
+* add defensive validation and missing test vectors ([8505de2](https://github.com/TheCryptoDonkey/spoken-token/commit/8505de2644e05b462ae2c0654c00bd177eb405a4))
+* harden input validation and correct PROTOCOL.md bias claims ([1bd9a6c](https://github.com/TheCryptoDonkey/spoken-token/commit/1bd9a6c7a748cc2569c418e328fffb4cb853080d))
+* remove imprecise bias number from PIN_BYTES comment ([8bebaf7](https://github.com/TheCryptoDonkey/spoken-token/commit/8bebaf71af134be9bb137e537fec0736c188309c))
+
 # [2.0.0](https://github.com/TheCryptoDonkey/spoken-token/compare/v1.0.4...v2.0.0) (2026-03-17)
 
 
