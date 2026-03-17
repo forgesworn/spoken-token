@@ -1,3 +1,12 @@
+## [1.0.1](https://github.com/TheCryptoDonkey/spoken-token/compare/v1.0.0...v1.0.1) (2026-03-17)
+
+
+### Bug Fixes
+
+* harden crypto primitives ([a1d8ffa](https://github.com/TheCryptoDonkey/spoken-token/commit/a1d8ffa43b353b446da2da0c59506509f3cdb151))
+* improve gitignore coverage and add wordlist integrity test ([2ec9a32](https://github.com/TheCryptoDonkey/spoken-token/commit/2ec9a3262c6e4c9e37789515dffa4c3784d86703))
+* validate context and identity for null bytes and empty strings ([50243c9](https://github.com/TheCryptoDonkey/spoken-token/commit/50243c951a0344b36e7012e4b83bb759aef1007e))
+
 # 1.0.0 (2026-03-17)
 
 
