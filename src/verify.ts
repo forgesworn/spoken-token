@@ -56,6 +56,12 @@ export function verifyToken(
 ): VerifyResult {
   const encoding = options?.encoding ?? DEFAULT_ENCODING
   const tolerance = options?.tolerance ?? 0
+  if (!context || !context.trim()) {
+    throw new Error('context must be a non-empty string')
+  }
+  if (context.includes('\0')) {
+    throw new Error('context must not contain null bytes')
+  }
   if (!Number.isInteger(counter) || counter < 0 || counter > 0xFFFFFFFF) {
     throw new RangeError(`Counter must be an integer 0–${0xFFFFFFFF}, got ${counter}`)
   }
@@ -70,6 +76,7 @@ export function verifyToken(
   }
   if (identities) {
     for (const id of identities) {
+      if (!id || !id.trim()) throw new Error('identities must be non-empty strings')
       if (id.includes('\0')) throw new Error('identities must not contain null bytes')
     }
   }

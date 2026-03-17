@@ -37,8 +37,8 @@ function deriveTokenBytesInternal(
   if (!context || !context.trim()) {
     throw new Error('context must be a non-empty string')
   }
-  if (identity !== undefined && identity === '') {
-    throw new Error('identity must be non-empty when provided')
+  if (identity !== undefined && !identity.trim()) {
+    throw new Error('identity must be a non-empty string when provided')
   }
   if (identity !== undefined && identity.includes('\0')) {
     throw new Error('identity must not contain null bytes')
