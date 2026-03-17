@@ -119,6 +119,10 @@ export function sha256(data: Uint8Array): Uint8Array {
     h7 = (h7 + hh) >>> 0
   }
 
+  // Best-effort zeroing of intermediate state
+  padded.fill(0)
+  W.fill(0)
+
   // Produce the final hash value (big-endian)
   const digest = new Uint8Array(32)
   const dv = new DataView(digest.buffer)
