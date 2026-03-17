@@ -170,6 +170,10 @@ describe('identity limit', () => {
     const exactly100 = Array.from({ length: 100 }, (_, i) => `user-${i}`)
     expect(() => verifyToken(SECRET, CTX, COUNTER, 'word', exactly100)).not.toThrow()
   })
+
+  it('throws on identity containing null bytes', () => {
+    expect(() => verifyToken(SECRET, CTX, COUNTER, 'word', ['alice', 'a\0b'])).toThrow('identities must not contain null bytes')
+  })
 })
 
 // ─── Multiple identities ─────────────────────────────────────────────────────

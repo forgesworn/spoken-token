@@ -45,8 +45,14 @@ export function deriveTokenBytes(
   counter: number,
   identity?: string,
 ): Uint8Array {
+  if (!context) {
+    throw new Error('context must be a non-empty string')
+  }
   if (identity !== undefined && identity === '') {
     throw new Error('identity must be non-empty when provided')
+  }
+  if (identity !== undefined && identity.includes('\0')) {
+    throw new Error('identity must not contain null bytes')
   }
   const key = normaliseSecret(secret)
   const data = identity
@@ -73,6 +79,12 @@ export function deriveToken(
   encoding: TokenEncoding = DEFAULT_ENCODING,
   identity?: string,
 ): string {
+  if (context.includes('\0')) {
+    throw new Error('context must not contain null bytes')
+  }
+  if (identity !== undefined && identity.includes('\0')) {
+    throw new Error('identity must not contain null bytes')
+  }
   const bytes = deriveTokenBytes(secret, context, counter, identity)
   return encodeToken(bytes, encoding)
 }
@@ -119,8 +131,10 @@ export function deriveDirectionalPair(
   }
   // Null-byte separator prevents concatenation ambiguity
   // (e.g. namespace "a:b" + role "c" vs namespace "a" + role "b:c")
+  // Calls deriveTokenBytes directly — the constructed context intentionally
+  // contains a null byte as the protocol-defined separator.
   return {
-    [roles[0]]: deriveToken(secret, `${namespace}\0${roles[0]}`, counter, encoding),
-    [roles[1]]: deriveToken(secret, `${namespace}\0${roles[1]}`, counter, encoding),
+    [roles[0]]: encodeToken(deriveTokenBytes(secret, `${namespace}\0${roles[0]}`, counter), encoding),
+    [roles[1]]: encodeToken(deriveTokenBytes(secret, `${namespace}\0${roles[1]}`, counter), encoding),
   }
 }

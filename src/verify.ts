@@ -59,23 +59,31 @@ export function verifyToken(
   if (identities && identities.length > MAX_IDENTITIES) {
     throw new RangeError(`identities array must not exceed ${MAX_IDENTITIES} entries`)
   }
+  if (identities) {
+    for (const id of identities) {
+      if (id.includes('\0')) throw new Error('identities must not contain null bytes')
+    }
+  }
   const normalised = input.toLowerCase().trim().replace(/\s+/g, ' ')
   const lo = Math.max(0, counter - tolerance)
   const hi = Math.min(0xFFFFFFFF, counter + tolerance)
 
-  // 1. Check per-identity tokens at exact counter
+  // Constant-time verification: always evaluate ALL candidates to prevent
+  // timing side-channels that leak whether/where a match occurred.
+  // Priority: identity-exact (3) > identity-tolerance (2) > group-wide (1).
+  let bestPriority = 0
+  let matchedIdentity: string | undefined
+
+  // 1–2. Check per-identity tokens across full window
   if (identities && identities.length > 0) {
     for (const identity of identities) {
-      if (timingSafeStringEqual(normalised, deriveToken(secret, context, counter, encoding, identity))) {
-        return { status: 'valid', identity }
-      }
-    }
-    // 2. Check per-identity tokens across tolerance window (non-exact)
-    for (const identity of identities) {
       for (let c = lo; c <= hi; c++) {
-        if (c === counter) continue
         if (timingSafeStringEqual(normalised, deriveToken(secret, context, c, encoding, identity))) {
-          return { status: 'valid', identity }
+          const p = c === counter ? 3 : 2
+          if (p > bestPriority) {
+            bestPriority = p
+            matchedIdentity = identity
+          }
         }
       }
     }
@@ -84,9 +92,17 @@ export function verifyToken(
   // 3. Check group-wide token (no identity)
   for (let c = lo; c <= hi; c++) {
     if (timingSafeStringEqual(normalised, deriveToken(secret, context, c, encoding))) {
-      return { status: 'valid' }
+      if (1 > bestPriority) {
+        bestPriority = 1
+        matchedIdentity = undefined
+      }
     }
   }
 
+  if (bestPriority > 0) {
+    return matchedIdentity !== undefined
+      ? { status: 'valid', identity: matchedIdentity }
+      : { status: 'valid' }
+  }
   return { status: 'invalid' }
 }

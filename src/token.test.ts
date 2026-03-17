@@ -100,6 +100,14 @@ describe('deriveTokenBytes', () => {
     expect(() => deriveTokenBytes(SECRET_1, 'test', 0, '')).toThrow('identity must be non-empty when provided')
   })
 
+  it('throws on empty context string', () => {
+    expect(() => deriveTokenBytes(SECRET_1, '', 0)).toThrow('context must be a non-empty string')
+  })
+
+  it('throws on identity containing null bytes', () => {
+    expect(() => deriveTokenBytes(SECRET_1, 'test', 0, 'a\0b')).toThrow('identity must not contain null bytes')
+  })
+
   it('throws on secret shorter than 16 bytes', () => {
     const shortSecret = hexToBytes('00112233445566778899aabbccddeeff').slice(0, 15)
     expect(() => deriveTokenBytes(shortSecret, 'test', 0)).toThrow(RangeError)
@@ -170,6 +178,14 @@ describe('deriveToken', () => {
     const a = deriveToken(SECRET_1, 'test', 0, undefined, 'alice')
     const b = deriveToken(SECRET_1, 'test', 0, undefined, 'bob')
     expect(a).not.toBe(b)
+  })
+
+  it('throws on context containing null bytes', () => {
+    expect(() => deriveToken(SECRET_1, 'a\0b', 0)).toThrow('context must not contain null bytes')
+  })
+
+  it('throws on identity containing null bytes', () => {
+    expect(() => deriveToken(SECRET_1, 'test', 0, undefined, 'a\0b')).toThrow('identity must not contain null bytes')
   })
 })
 
