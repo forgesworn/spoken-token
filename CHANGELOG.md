@@ -1,3 +1,10 @@
+## [2.0.3](https://github.com/forgesworn/spoken-token/compare/v2.0.2...v2.0.3) (2026-03-20)
+
+
+### Bug Fixes
+
+* correct copyright to TheCryptoDonkey ([af4fa47](https://github.com/forgesworn/spoken-token/commit/af4fa47c4a95dc8b6672be7c6dcb12ee99ba4a03))
+
 ## [2.0.2](https://github.com/TheCryptoDonkey/spoken-token/compare/v2.0.1...v2.0.2) (2026-03-17)
 
 
