@@ -1,0 +1,10 @@
+{
+  "projectTitle": "spoken-token",
+  "description": "TOTP but you say it out loud. Derive time-rotating, human-speakable verification tokens from a shared secret. Zero dependencies.",
+  "excludeFolders": ["node_modules", "dist", "coverage", "src", ".github", ".changeset"],
+  "rules": [
+    "Tokens rotate on a configurable time window (default 30 seconds, like TOTP).",
+    "Output is a sequence of common English words — designed to be spoken aloud over a phone call or in person.",
+    "HMAC-based — the shared secret never leaves the device."
+  ]
+}
