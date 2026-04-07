@@ -415,4 +415,5 @@ Use `spoken-token` when you need the primitives without the CANARY protocol over
 - [npm](https://www.npmjs.com/package/spoken-token)
 - [GitHub](https://github.com/forgesworn/spoken-token)
 - [PROTOCOL.md](https://github.com/forgesworn/spoken-token/blob/main/PROTOCOL.md) — formal specification (SPOKEN-DERIVE, SPOKEN-ENCODE)
+- [COOKBOOK.md](https://github.com/forgesworn/spoken-token/blob/main/COOKBOOK.md) — 13 integration patterns (rideshare, phone auth, courier handoff, group entry, Express middleware, browser display, Nostr identity binding)
 - [canary-kit](https://www.npmjs.com/package/canary-kit) — extends spoken-token with duress signalling, liveness monitoring, and Nostr transport

@@ -51,4 +51,5 @@ Encoding options: `{ format: 'words', count: 1 }` (default), `{ format: 'pin', d
 
 - [README](https://github.com/forgesworn/spoken-token/blob/main/README.md): full API reference with examples
 - [PROTOCOL.md](https://github.com/forgesworn/spoken-token/blob/main/PROTOCOL.md): formal protocol specification
+- [COOKBOOK.md](https://github.com/forgesworn/spoken-token/blob/main/COOKBOOK.md): 13 integration patterns (rideshare, phone auth, courier handoff, group entry, Express middleware, browser display, Nostr identity binding)
 - [canary-kit](https://github.com/forgesworn/canary-kit): extends spoken-token with duress signalling, liveness monitoring, and Nostr transport
