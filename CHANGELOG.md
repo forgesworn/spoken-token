@@ -1,3 +1,10 @@
+## [2.0.4](https://github.com/forgesworn/spoken-token/compare/v2.0.3...v2.0.4) (2026-04-12)
+
+
+### Bug Fixes
+
+* resolve development dependency vulnerabilities ([f98156d](https://github.com/forgesworn/spoken-token/commit/f98156de71dcef8d808d89801357602759610b48))
+
 ## [2.0.3](https://github.com/forgesworn/spoken-token/compare/v2.0.2...v2.0.3) (2026-03-20)
 
 
