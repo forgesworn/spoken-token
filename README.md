@@ -4,6 +4,7 @@
 
 [![CI](https://github.com/forgesworn/spoken-token/actions/workflows/ci.yml/badge.svg)](https://github.com/forgesworn/spoken-token/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/spoken-token)](https://www.npmjs.com/package/spoken-token)
+[![GitHub Sponsors](https://img.shields.io/github/sponsors/TheCryptoDonkey?logo=githubsponsors&color=ea4aaa&label=Sponsor)](https://github.com/sponsors/TheCryptoDonkey)
 
 TOTP but you say it out loud — derive time-rotating, human-speakable verification tokens from a shared secret.
 
