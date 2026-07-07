@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { verifyToken, MAX_TOLERANCE } from './verify.js'
+import {
+  estimateVerificationRisk,
+  verifyToken,
+  MAX_TOLERANCE,
+  MAX_INPUT_CHARS,
+} from './verify.js'
 import { deriveToken } from './token.js'
 
 const SECRET = '0000000000000000000000000000000000000000000000000000000000000001'
@@ -96,6 +101,80 @@ describe('group-wide match', () => {
   })
 })
 
+// ─── Identity-only mode ─────────────────────────────────────────────────────
+describe('identity-only mode', () => {
+  it('preserves group-wide fallback by default for backwards compatibility', () => {
+    const token = deriveToken(SECRET, CTX, COUNTER)
+    const result = verifyToken(SECRET, CTX, COUNTER, token, ['alice', 'bob'])
+    expect(result).toEqual({ status: 'valid' })
+  })
+
+  it('rejects a group-wide token when identity-only mode is enabled', () => {
+    const token = deriveToken(SECRET, CTX, COUNTER)
+    const result = verifyToken(
+      SECRET,
+      CTX,
+      COUNTER,
+      token,
+      ['alice', 'bob'],
+      { identityMode: 'identity-only' },
+    )
+    expect(result).toEqual({ status: 'invalid' })
+  })
+
+  it('accepts identity-bound tokens when identity-only mode is enabled', () => {
+    const token = deriveToken(SECRET, CTX, COUNTER, undefined, 'alice')
+    const result = verifyToken(
+      SECRET,
+      CTX,
+      COUNTER,
+      token,
+      ['alice', 'bob'],
+      { identityMode: 'identity-only' },
+    )
+    expect(result).toEqual({ status: 'valid', identity: 'alice' })
+  })
+
+  it('accepts identity-bound tokens inside tolerance when identity-only mode is enabled', () => {
+    const token = deriveToken(SECRET, CTX, COUNTER + 1, undefined, 'bob')
+    const result = verifyToken(
+      SECRET,
+      CTX,
+      COUNTER,
+      token,
+      ['alice', 'bob'],
+      { identityMode: 'identity-only', tolerance: 1 },
+    )
+    expect(result).toEqual({ status: 'valid', identity: 'bob' })
+  })
+
+  it('does not fall back to group-wide verification for an empty identities array in identity-only mode', () => {
+    const token = deriveToken(SECRET, CTX, COUNTER)
+    const result = verifyToken(
+      SECRET,
+      CTX,
+      COUNTER,
+      token,
+      [],
+      { identityMode: 'identity-only' },
+    )
+    expect(result).toEqual({ status: 'invalid' })
+  })
+
+  it('throws for an unsupported identity mode', () => {
+    expect(() =>
+      verifyToken(
+        SECRET,
+        CTX,
+        COUNTER,
+        'word',
+        ['alice'],
+        { identityMode: 'strict' } as never,
+      ),
+    ).toThrow('Unsupported identity mode')
+  })
+})
+
 // ─── Case-insensitive matching ───────────────────────────────────────────────
 describe('case-insensitive matching', () => {
   it('accepts uppercase input', () => {
@@ -126,6 +205,33 @@ describe('whitespace normalisation', () => {
     // Replace single spaces with double spaces between words
     const padded = token.replace(/ /g, '  ')
     const result = verifyToken(SECRET, CTX, COUNTER, padded, undefined, { encoding })
+    expect(result).toEqual({ status: 'valid' })
+  })
+})
+
+// ─── Input length guard ─────────────────────────────────────────────────────
+describe('input length guard', () => {
+  it('returns invalid for oversized input before expensive candidate comparison', () => {
+    const oversized = 'a'.repeat(MAX_INPUT_CHARS + 1)
+    expect(verifyToken(SECRET, CTX, COUNTER, oversized)).toEqual({ status: 'invalid' })
+  })
+
+  it('still accepts maximum word-count phrases with normal spacing', () => {
+    const encoding = { format: 'words', count: 16 } as const
+    const token = deriveToken(SECRET, CTX, COUNTER, encoding)
+    const result = verifyToken(SECRET, CTX, COUNTER, token, undefined, { encoding })
+    expect(result).toEqual({ status: 'valid' })
+  })
+
+  it('uses custom wordlist length when calculating the oversized-input guard', () => {
+    const longWordlist = Array.from(
+      { length: 2048 },
+      (_, i) => `${'x'.repeat(MAX_INPUT_CHARS + 10)}${i}`,
+    )
+    const encoding = { format: 'words', count: 1, wordlist: longWordlist } as const
+    const token = deriveToken(SECRET, CTX, COUNTER, encoding)
+    expect(token.length).toBeGreaterThan(MAX_INPUT_CHARS)
+    const result = verifyToken(SECRET, CTX, COUNTER, token, undefined, { encoding })
     expect(result).toEqual({ status: 'valid' })
   })
 })
@@ -301,5 +407,57 @@ describe('identity edge cases', () => {
     const token = deriveToken(SECRET, CTX, COUNTER, undefined, 'alice')
     const result = verifyToken(SECRET, CTX, COUNTER, token, ['alice', 'alice', 'bob'])
     expect(result).toEqual({ status: 'valid', identity: 'alice' })
+  })
+})
+
+// ─── Verification risk estimates ────────────────────────────────────────────
+describe('estimateVerificationRisk', () => {
+  it('counts a single default group-wide word candidate', () => {
+    const risk = estimateVerificationRisk()
+    expect(risk.candidates).toBe(1)
+    expect(risk.tokenSpace).toBe(2048)
+    expect(risk.singleAttemptSuccessProbability).toBeCloseTo(1 / 2048, 12)
+    expect(risk.effectiveBits).toBeCloseTo(11, 12)
+  })
+
+  it('counts identities, tolerance, and group fallback candidates', () => {
+    const risk = estimateVerificationRisk({
+      identities: ['alice', 'bob'],
+      tolerance: 1,
+    })
+    expect(risk.candidates).toBe(9)
+    expect(risk.singleAttemptSuccessProbability).toBeCloseTo(1 - (1 - 1 / 2048) ** 9, 12)
+  })
+
+  it('removes group fallback candidates in identity-only mode', () => {
+    const risk = estimateVerificationRisk({
+      identities: ['alice', 'bob'],
+      tolerance: 1,
+      identityMode: 'identity-only',
+    })
+    expect(risk.candidates).toBe(6)
+  })
+
+  it('shows the high guess surface for max identities and max tolerance with one word', () => {
+    const risk = estimateVerificationRisk({
+      identities: 100,
+      tolerance: MAX_TOLERANCE,
+    })
+    expect(risk.candidates).toBe(2121)
+    expect(risk.singleAttemptSuccessProbability).toBeGreaterThan(0.64)
+    expect(risk.singleAttemptSuccessProbability).toBeLessThan(0.65)
+  })
+
+  it('uses the selected encoding token space', () => {
+    expect(estimateVerificationRisk({ encoding: { format: 'words', count: 2 } }).tokenSpace).toBe(2048 ** 2)
+    expect(estimateVerificationRisk({ encoding: { format: 'pin', digits: 6 } }).tokenSpace).toBe(1_000_000)
+    expect(estimateVerificationRisk({ encoding: { format: 'hex', length: 8 } }).tokenSpace).toBe(16 ** 8)
+  })
+
+  it('throws on invalid risk-estimate parameters', () => {
+    expect(() => estimateVerificationRisk({ identities: -1 })).toThrow(RangeError)
+    expect(() => estimateVerificationRisk({ identities: 101 })).toThrow(RangeError)
+    expect(() => estimateVerificationRisk({ tolerance: MAX_TOLERANCE + 1 })).toThrow(RangeError)
+    expect(() => estimateVerificationRisk({ identityMode: 'strict' } as never)).toThrow('Unsupported identity mode')
   })
 })

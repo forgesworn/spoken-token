@@ -16,7 +16,7 @@ import {
 
 // Shared secret established during group setup
 const secret = randomSeed()
-console.log(`Shared secret: ${secret}`)
+console.log('Shared secret generated for demo')
 
 const counter = getCounter(Date.now() / 1000) // rotates every 7 days
 console.log(`Counter: ${counter}`)

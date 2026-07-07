@@ -245,7 +245,8 @@ To accommodate clock drift, implementations MAY check tokens across a window of
 2. **Per-identity tokens across tolerance window** — check each identity at
    non-exact counters within `±tolerance`.
 3. **Group-wide token across tolerance window** — check the anonymous (no-identity)
-   token across the full window (including the exact counter).
+   token across the full window (including the exact counter), unless the
+   implementation is explicitly configured for identity-only verification.
 4. **No match** — verification failed.
 
 Exact-counter matches take priority over tolerance-window matches.
@@ -323,6 +324,13 @@ phrase provides 22 bits, and a 3-word phrase provides 33 bits. For high-security
 contexts, use 2+ words or combine with other authentication factors.
 
 A 6-digit PIN provides approximately 20 bits of entropy.
+
+These figures describe one accepted token value. Verification parameters can
+accept multiple token values: a tolerance of `N` accepts up to `2N + 1` counters,
+each identity adds another token per accepted counter, and group-wide fallback
+adds another token per accepted counter. Implementations SHOULD expose or document
+the accepted-candidate count and SHOULD require stronger encodings when the
+online guessing probability is too high for the application.
 
 ### Timing side-channels
 

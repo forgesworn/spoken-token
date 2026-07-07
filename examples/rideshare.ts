@@ -10,7 +10,7 @@ import { deriveToken, verifyToken, getCounter, randomSeed } from 'spoken-token'
 
 // In production, both parties receive this secret during booking
 const secret = randomSeed()
-console.log(`Shared secret: ${secret}`)
+console.log('Shared secret generated for demo')
 
 // Both sides compute the same counter from wall-clock time
 const counter = getCounter(Date.now() / 1000) // rotates every 7 days by default

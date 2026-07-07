@@ -98,16 +98,43 @@ const personal = derivePersona(root, 'personal', 0)
 const bitcoiner = derivePersona(root, 'bitcoiner', 0)
 
 // Same group secret, same counter — different persona = different token
-const tokenA = deriveToken(groupSecret, 'canary:verify', counter, 'words', personal.identity.npub)
-const tokenB = deriveToken(groupSecret, 'canary:verify', counter, 'words', bitcoiner.identity.npub)
+const tokenA = deriveToken(groupSecret, 'canary:verify', counter, undefined, personal.identity.npub)
+const tokenB = deriveToken(groupSecret, 'canary:verify', counter, undefined, bitcoiner.identity.npub)
 // tokenA !== tokenB — persona isolation
 ```
+
+Identity binding is label/domain separation, not proof of identity by itself. If
+multiple parties know the same group secret, each party can derive tokens for any
+public identity label. Use per-member secrets or signatures when attribution must
+be cryptographically enforced.
 
 ### `verifyToken(secret, context, counter, input, identities?, options?)`
 
 Verify a spoken or entered token. Returns `{ status: 'valid' | 'invalid', identity?: string }`.
 
-Options: `{ encoding?, tolerance? }` — tolerance accepts tokens within ±N counter steps (max 10).
+Options: `{ encoding?, tolerance?, identityMode? }` — tolerance accepts tokens within ±N counter steps (max 10).
+
+`identityMode: 'with-group-fallback'` is the default for backwards compatibility:
+identity-bound tokens are checked first, then group-wide tokens are also accepted.
+Use `identityMode: 'identity-only'` to accept only tokens bound to the supplied
+identity list.
+
+### `estimateVerificationRisk(options?)`
+
+Estimate how many token values a verification call accepts and the single-attempt
+online guessing probability. Use this when combining identities, tolerance, and
+short encodings:
+
+```typescript
+import { estimateVerificationRisk } from 'spoken-token'
+
+estimateVerificationRisk({
+  identities: 100,
+  tolerance: 1,
+  encoding: { format: 'words', count: 1 },
+})
+// → candidates: 303, singleAttemptSuccessProbability: ~13.8%
+```
 
 ### `deriveDirectionalPair(secret, namespace, roles, counter, encoding?)`
 
@@ -141,7 +168,7 @@ deriveToken(secret, context, counter, { format: 'words', wordlist: myWordlist })
 
 ## How it works
 
-Each token is `HMAC-SHA256(secret, utf8(context) || counter_be32)`, truncated and mapped onto a wordlist or numeric range. The counter is derived from wall-clock time divided by the rotation interval, giving both parties the same value without coordination. A tolerance window (default: 0) accepts tokens from adjacent counter steps to absorb clock skew. Directional pairs use `context = namespace + '\0' + role` so each role's token is cryptographically independent.
+Each token is `HMAC-SHA256(secret, utf8(context) || counter_be32)`, truncated and mapped onto a wordlist or numeric range. The counter is derived from wall-clock time divided by the rotation interval, giving both parties the same value without coordination. A tolerance window (default: 0) accepts tokens from adjacent counter steps to absorb clock skew. Directional pairs use `context = "pair\0" + namespace + "\0" + role` so each role's token is cryptographically independent.
 
 ---
 

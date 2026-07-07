@@ -7,9 +7,14 @@ export {
 
 export {
   verifyToken,
+  estimateVerificationRisk,
   MAX_TOLERANCE,
+  MAX_INPUT_CHARS,
   type VerifyResult,
   type VerifyOptions,
+  type VerifyIdentityMode,
+  type VerificationRiskOptions,
+  type VerificationRisk,
 } from './verify.js'
 
 export {

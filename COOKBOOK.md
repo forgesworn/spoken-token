@@ -129,7 +129,10 @@ if (result.status === 'valid') {
 
 ## 5. Group entry with per-member tokens
 
-Each member gets a unique word from the same group secret. The verifier identifies who entered, not just whether entry is valid.
+Each configured identity label gets a distinct word from the same group secret.
+This is useful for routing or display, but it is not cryptographic attribution:
+anyone with the group secret can derive tokens for any public identity label. Use
+per-member secrets or signatures when identity must be enforced.
 
 ```typescript
 import { deriveToken, verifyToken, getCounter, randomSeed } from 'spoken-token'
@@ -147,7 +150,7 @@ const result = verifyToken(
   groupSecret, 'event:access', counter,
   spokenWord,
   members,
-  { tolerance: 1 },
+  { tolerance: 1, identityMode: 'identity-only' },
 )
 
 if (result.status === 'valid') {
@@ -418,7 +421,8 @@ const hobbyToken = deriveToken(groupSecret, 'canary:verify', counter, undefined,
 ## Security reminders
 
 - Hold secrets in memory only — never write to `localStorage`, disk, or logs.
-- Use `tolerance: 1` cautiously — it doubles the window of valid tokens. Prefer `tolerance: 0` unless clock skew is a known issue.
-- Single-word tokens are 1-in-2048 guessable. Rate-limit verification endpoints.
+- Use `tolerance: 1` cautiously — it checks three counter values before identity count is considered. Prefer `tolerance: 0` unless clock skew is a known issue.
+- Single-word tokens are 1-in-2048 for one accepted candidate. Identities, tolerance, and group fallback multiply the accepted candidates; use `estimateVerificationRisk` and rate-limit verification endpoints.
+- Use `identityMode: 'identity-only'` when a verifier should not accept anonymous group-wide tokens while checking an identity list.
 - Constant-time comparison is used internally, but JS runtimes cannot guarantee it under JIT. Add rate limiting for high-assurance environments.
 - See [PROTOCOL.md](PROTOCOL.md) and [SECURITY.md](SECURITY.md) for the full security model.

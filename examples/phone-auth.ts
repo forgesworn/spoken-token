@@ -15,7 +15,7 @@ import {
 
 // Shared secret established during account setup
 const secret = randomSeed()
-console.log(`Shared secret: ${secret}`)
+console.log('Shared secret generated for demo')
 
 // 30-second rotation for real-time phone calls
 const counter = getCounter(Date.now() / 1000, 30)
