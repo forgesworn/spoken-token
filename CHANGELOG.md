@@ -30,6 +30,14 @@
 
 # [2.0.0](https://github.com/TheCryptoDonkey/spoken-token/compare/v1.0.4...v2.0.0) (2026-03-17)
 
+## 2.1.0 (2026-07-07)
+
+### Features
+
+- harden token verification
+
+
+
 
 * feat!: eliminate PIN bias, add directional pair domain separation ([c087bb7](https://github.com/TheCryptoDonkey/spoken-token/commit/c087bb7277921f35ba8be6eadd7b82bf526bb576))
 
