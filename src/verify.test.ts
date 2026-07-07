@@ -5,7 +5,8 @@ import {
   MAX_TOLERANCE,
   MAX_INPUT_CHARS,
 } from './verify.js'
-import { deriveToken } from './token.js'
+import { deriveToken, deriveTokenBytes } from './token.js'
+import { readUint16BE } from './crypto.js'
 
 const SECRET = '0000000000000000000000000000000000000000000000000000000000000001'
 const CTX = 'test:verify'
@@ -378,6 +379,18 @@ describe('tolerance boundary clamping', () => {
     const result = verifyToken(SECRET, CTX, 0xFFFFFFFF, token, undefined, { tolerance: 5 })
     expect(result).toEqual({ status: 'valid' })
   })
+
+  it('counter=0 tolerance window does not wrap backwards to uint32 max', () => {
+    const wrappedToken = deriveToken(SECRET, CTX, 0xFFFFFFFF)
+    const result = verifyToken(SECRET, CTX, 0, wrappedToken, undefined, { tolerance: 1 })
+    expect(result).toEqual({ status: 'invalid' })
+  })
+
+  it('counter=0xFFFFFFFF tolerance window does not wrap forwards to zero', () => {
+    const wrappedToken = deriveToken(SECRET, CTX, 0)
+    const result = verifyToken(SECRET, CTX, 0xFFFFFFFF, wrappedToken, undefined, { tolerance: 1 })
+    expect(result).toEqual({ status: 'invalid' })
+  })
 })
 
 // ─── Context validation ─────────────────────────────────────────────────────
@@ -438,6 +451,16 @@ describe('estimateVerificationRisk', () => {
     expect(risk.candidates).toBe(6)
   })
 
+  it('reports zero accepted candidates for identity-only mode without identities', () => {
+    const risk = estimateVerificationRisk({
+      tolerance: 1,
+      identityMode: 'identity-only',
+    })
+    expect(risk.candidates).toBe(0)
+    expect(risk.singleAttemptSuccessProbability).toBe(0)
+    expect(risk.effectiveBits).toBe(Infinity)
+  })
+
   it('shows the high guess surface for max identities and max tolerance with one word', () => {
     const risk = estimateVerificationRisk({
       identities: 100,
@@ -459,5 +482,49 @@ describe('estimateVerificationRisk', () => {
     expect(() => estimateVerificationRisk({ identities: 101 })).toThrow(RangeError)
     expect(() => estimateVerificationRisk({ tolerance: MAX_TOLERANCE + 1 })).toThrow(RangeError)
     expect(() => estimateVerificationRisk({ identityMode: 'strict' } as never)).toThrow('Unsupported identity mode')
+  })
+})
+
+describe('verification collision priority', () => {
+  const collidingWordlist = Array.from({ length: 2048 }, () => 'shared')
+  const collidingEncoding = { format: 'words', count: 1, wordlist: collidingWordlist } as const
+
+  function firstWordIndex(counter: number, identity?: string): number {
+    return readUint16BE(deriveTokenBytes(SECRET, CTX, counter, identity), 0) % 2048
+  }
+
+  it('keeps exact identity matches ahead of tolerance and group fallback collisions', () => {
+    const result = verifyToken(
+      SECRET,
+      CTX,
+      COUNTER,
+      'shared',
+      ['alice', 'bob'],
+      { encoding: collidingEncoding, tolerance: 1 },
+    )
+
+    expect(result).toEqual({ status: 'valid', identity: 'alice' })
+  })
+
+  it('keeps identity-window matches ahead of group fallback when there is no exact identity match', () => {
+    const identityExact = firstWordIndex(COUNTER, 'alice')
+    const identityNext = firstWordIndex(COUNTER + 1, 'alice')
+    const groupExact = firstWordIndex(COUNTER)
+    const wordlist = Array.from({ length: 2048 }, (_, i) => `word${i}`)
+    wordlist[identityNext] = 'shared'
+    wordlist[groupExact] = 'shared'
+
+    expect(wordlist[identityExact]).not.toBe('shared')
+
+    const result = verifyToken(
+      SECRET,
+      CTX,
+      COUNTER,
+      'shared',
+      ['alice'],
+      { encoding: { format: 'words', count: 1, wordlist }, tolerance: 1 },
+    )
+
+    expect(result).toEqual({ status: 'valid', identity: 'alice' })
   })
 })
