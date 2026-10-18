@@ -30,6 +30,14 @@
 
 # [2.0.0](https://github.com/TheCryptoDonkey/spoken-token/compare/v1.0.4...v2.0.0) (2026-03-17)
 
+## 2.1.1 (2026-10-18)
+
+### Bug Fixes
+
+- align README, llms files and AGENTS.md with the source (#48) (docs)
+
+
+
 ## 2.1.0 (2026-07-07)
 
 ### Features
