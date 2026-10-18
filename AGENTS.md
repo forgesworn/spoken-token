@@ -4,7 +4,7 @@ Instructions for AI coding agents working on this project.
 
 ## What this project does
 
-TOTP but you say it out loud. Derive time-rotating, human-speakable verification tokens from a shared secret. Zero runtime dependencies, ESM-only, works in Node.js and the browser.
+TOTP but you say it out loud. Derive time-rotating, human-speakable verification tokens from a shared secret. Zero runtime dependencies, ESM-only, works in Node.js (22 or later, per `engines`) and the browser. Only `randomSeed()` needs the global Web Crypto API.
 
 ## Commands
 
@@ -22,7 +22,7 @@ TOTP but you say it out loud. Derive time-rotating, human-speakable verification
 | File | Purpose |
 |------|---------|
 | `src/token.ts` | Core derivation: `deriveToken`, `deriveDirectionalPair` |
-| `src/verify.ts` | Verification with tolerance window |
+| `src/verify.ts` | Verification with tolerance window and identity modes; `estimateVerificationRisk` |
 | `src/encoding.ts` | Output encoding (words, PIN, hex) |
 | `src/wordlist.ts` | 2048-word en-v1 spoken-clarity wordlist |
 | `src/counter.ts` | Time-based and event-ID counter derivation |
@@ -33,10 +33,26 @@ TOTP but you say it out loud. Derive time-rotating, human-speakable verification
 ## Subpath Exports
 
 - `spoken-token`: full API (barrel re-export)
-- `spoken-token/counter`: `getCounter`, `counterFromEventId`, `counterToBytes`
+- `spoken-token/counter`: `getCounter`, `counterFromEventId`, `counterToBytes`, `DEFAULT_ROTATION_INTERVAL`, `MAX_COUNTER_OFFSET`
 - `spoken-token/wordlist`: `WORDLIST`, `WORDLIST_SIZE`, `getWord`, `indexOf`
-- `spoken-token/encoding`: `encodeAsWords`, `encodeAsPin`, `encodeAsHex`, `encodeToken`
-- `spoken-token/crypto`: `sha256`, `hmacSha256`, `randomSeed`, `hexToBytes`, `bytesToHex`, `timingSafeEqual`, `timingSafeStringEqual`
+- `spoken-token/encoding`: `encodeAsWords`, `encodeAsPin`, `encodeAsHex`, `encodeToken`, `DEFAULT_ENCODING`, `TokenEncoding`
+- `spoken-token/crypto`: `sha256`, `hmacSha256`, `randomSeed`, `hexToBytes`, `bytesToHex`, `readUint16BE`, `concatBytes`, `bytesToBase64`, `base64ToBytes`, `timingSafeEqual`, `timingSafeStringEqual`
+
+`deriveTokenBytes`, `verifyToken`, `estimateVerificationRisk`, `deriveToken`, `deriveDirectionalPair`, `MAX_TOLERANCE` and `MAX_INPUT_CHARS` are exported from the root only (there are no `token` or `verify` subpaths).
+
+## Secrets and examples
+
+- `randomSeed()` takes no arguments and returns a 64-character hex string (32 random bytes). `randomSeed(32)` is a type error.
+- `secret` is a hex string or a `Uint8Array` of at least 16 bytes. Strings are decoded as hex, never as UTF-8 passphrases, so a non-hex string throws.
+- Every code example in the docs must define its variables (`const sharedSecret = randomSeed()`, `const counter = getCounter(Date.now() / 1000)`) and import everything it uses.
+
+## Verification behaviour
+
+- `verifyToken(secret, context, counter, input, identities?, options?)`: `identities` is a mutable `string[]` (max 100, each non-empty with no null bytes); `options` is `{ encoding?, tolerance?, identityMode? }`.
+- `input` is normalised with lower-casing, trimming and collapsing whitespace runs to one space. Whitespace is collapsed, not removed. Only the input is lower-cased, so custom wordlists must be lower-case.
+- `identityMode` defaults to `'with-group-fallback'`: identity-bound tokens are checked and then the group-wide token is also accepted, even when `identities` is supplied (that match has no `identity`). `'identity-only'` accepts only tokens bound to the supplied identities.
+- `estimateVerificationRisk({ encoding?, tolerance?, identities?, identityMode? })` returns `{ candidates, tokenSpace, singleAttemptSuccessProbability, effectiveBits }`. Use it when combining identities, tolerance and short encodings.
+- `verifyToken` cannot verify directional-pair tokens: their context contains null bytes, which it rejects, and a plain context derives different tokens. There is no pair verifier. Document the pattern in the README: derive with `deriveDirectionalPair` and compare with `timingSafeStringEqual` after the same normalisation, looping counters for tolerance.
 
 ## v2.0 Breaking Changes
 
@@ -61,6 +77,8 @@ These architectural decisions are non-obvious and must not be reverted:
 - Token verification uses timing-safe comparison (`timingSafeStringEqual`)
 - HMAC intermediate buffers and SHA-256 working state are zeroed after use
 - `randomSeed()` returns a 64-char hex string (32 bytes) via `crypto.getRandomValues`
+- The library is stateless: no replay protection and no rate limiting. A token is accepted for `(2 x tolerance + 1)` rotation intervals (about 21 days at the 7-day default with tolerance 1). Say so wherever tolerance is documented.
+- Identity binding is label separation, not authentication; anyone with the secret can derive any identity's token
 
 ## Verifying changes
 
@@ -76,6 +94,7 @@ npm test && npm run typecheck && npm run lint
 - Pair prefix: the `"pair\0"` context prefix in `deriveDirectionalPair` prevents collision with identity-bound tokens; do not remove it
 - Whitespace rejection: empty and whitespace-only context strings, namespaces, and roles are rejected by design
 - Counter range: counters are uint32 (0 to 4,294,967,295); negative, fractional, and overflow values throw `RangeError`
+- Error types: empty, whitespace-only or null-byte context, namespace, role and identity throw `Error`; short secrets, bad counters, tolerance outside 0 to 10, and more than 100 identities throw `RangeError`
 
 ## Release process
 
