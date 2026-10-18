@@ -12,7 +12,7 @@ derive the same word (or phrase, PIN, hex code) from a shared secret without
 transmitting it. The 2048-word English wordlist is curated for spoken clarity —
 no homophones, no phonetic near-collisions, 3-8 characters each.
 
-Works in Node.js and the browser. ESM-only.
+Works in Node.js (22 or later, per `engines`) and the browser. ESM-only.
 
 ## Getting Started
 
@@ -21,35 +21,60 @@ npm install spoken-token
 ```
 
 ```typescript
-import { deriveToken, getCounter } from 'spoken-token'
+import { deriveToken, getCounter, randomSeed } from 'spoken-token'
+
+// Generate the secret once and share it with the other party over a secure channel
+const sharedSecret = randomSeed() // 64-character hex string (32 random bytes)
 
 // Both parties derive the same word from the shared secret
 const counter = getCounter(Date.now() / 1000)  // rotates every 7 days
 const word = deriveToken(sharedSecret, 'rideshare:pickup', counter)
-// => 'carbon'
+// => a word from the wordlist, e.g. 'carbon'
 ```
+
+`secret` must be a hex string or a `Uint8Array` of at least 16 bytes. A plain-text passphrase is not accepted: strings are decoded as hex, so a non-hex string throws.
 
 ## Key Concepts
 
-- **Token derivation** — `HMAC-SHA256(secret, context || counter)` truncated and encoded as a word, PIN, or hex string.
+- **Token derivation**: `HMAC-SHA256(secret, utf8(context) || counter_be32)`, or with an identity `HMAC-SHA256(secret, utf8(context) || 0x00 || utf8(identity) || counter_be32)`, truncated and encoded as a word, PIN, or hex string.
 - **Counter** — derived from wall-clock time divided by a rotation interval (default: 7 days). Both parties compute the same value independently.
-- **Context** — a domain-separation string (e.g. `'rideshare:pickup'`) that ensures tokens for different purposes never collide.
-- **Directional pairs** — two distinct tokens from one secret, one per role (e.g. caller/agent), preventing the echo problem where one party parrots the other.
+- **Context**: a domain-separation string (e.g. `'rideshare:pickup'`) that ensures tokens for different purposes never collide. Must be non-empty, not whitespace-only, and free of null bytes.
+- **Identity binding**: an optional per-member `identity` string gives each member a different token from the same secret. It is label separation, not authentication: anyone with the secret can derive any identity's token.
+- **Directional pairs**: two distinct tokens from one secret, one per role (e.g. caller/agent), preventing the echo problem where one party parrots the other. Each role's context is `"pair\0" + namespace + "\0" + role`.
 - **Tolerance window** — accept tokens from adjacent counter steps (default: 0, max: 10) to absorb clock skew.
 
 ## API Surface
 
 - `deriveToken(secret, context, counter, encoding?, identity?)` — derive an encoded token string (word, PIN, or hex)
-- `verifyToken(secret, context, counter, input, identities?, options?)` — verify a spoken token with tolerance window and optional per-identity matching
+- `verifyToken(secret, context, counter, input, identities?, options?)`: verify a spoken token with tolerance window and optional per-identity matching. `identities` is a mutable `string[]` (max 100, each non-empty with no null bytes). `options` is `{ encoding?, tolerance?, identityMode? }`. Returns `{ status: 'valid' | 'invalid', identity?: string }`.
+- `estimateVerificationRisk(options?)`: report how many token values a verification call accepts and the single-attempt guessing probability. Options: `{ encoding?, tolerance?, identities?, identityMode? }`. Returns `{ candidates, tokenSpace, singleAttemptSuccessProbability, effectiveBits }`.
 - `deriveDirectionalPair(secret, namespace, roles, counter, encoding?)` — derive two distinct role-keyed tokens from one secret
 - `getCounter(timestampSec, rotationIntervalSec?)` — compute time-based counter (default interval: 7 days)
-- `counterFromEventId(eventId)` — deterministic counter from an event identifier via SHA-256
+- `counterFromEventId(eventId)`: deterministic counter from an event identifier via SHA-256 (does not rotate with time)
+- `randomSeed()`: no arguments; returns a 64-character hex string of 32 random bytes, suitable as a `secret`
 
 Encoding options: `{ format: 'words', count: 1 }` (default), `{ format: 'pin', digits: 4 }`, `{ format: 'hex', length: 8 }`.
+
+Subpaths: `spoken-token/counter`, `spoken-token/wordlist`, `spoken-token/encoding`, `spoken-token/crypto` (see llms-full.txt for their exports).
+
+## Verification behaviour
+
+- **Normalisation:** `verifyToken` lower-cases the input, trims it, and collapses each run of whitespace to one space. Whitespace is collapsed, not removed, so `'04 78'` does not match PIN `'0478'`. Over-long input returns `invalid` without throwing.
+- **identityMode:** `'with-group-fallback'` (the default) checks identity-bound tokens and then also accepts the group-wide token derived with no identity, even when `identities` is supplied; that match returns `{ status: 'valid' }` with no `identity`. Pass `identityMode: 'identity-only'` to accept only tokens bound to the supplied identities.
+- **Directional-pair tokens:** `verifyToken` cannot verify them. The pair context contains null bytes, which `verifyToken` rejects, and a plain context derives different tokens. Derive the pair on the verifying side with `deriveDirectionalPair` and compare with `timingSafeStringEqual` after the same normalisation, looping over counters for tolerance (full example in the README).
+- **Errors:** empty or whitespace-only context, namespace, role or identity, and null bytes in any of them, throw `Error`. A counter that is not an integer from 0 to 4294967295, a secret under 16 bytes, a tolerance outside 0-10, or more than 100 identities throws `RangeError`.
+
+## Security model
+
+- Stateless: there is no replay protection and no rate limiting. A token verifies repeatedly while inside its window. Record accepted tokens if they must be single-use, and limit attempts per caller.
+- A token is accepted for `(2 × tolerance + 1)` rotation intervals: about 21 days with the 7-day default and `tolerance: 1`, and 90 seconds with 30-second rotation and `tolerance: 1`.
+- One word is 11 bits (1 in 2048 per guess). Identities, tolerance and group fallback multiply the accepted tokens; size them with `estimateVerificationRisk`.
+- Whoever holds the secret can derive every token. Timing-safe comparison is best effort in JavaScript.
 
 ## Optional
 
 - [README](https://github.com/forgesworn/spoken-token/blob/main/README.md): full API reference with examples
+- [llms-full.txt](https://github.com/forgesworn/spoken-token/blob/main/llms-full.txt): the complete API reference in one file
 - [PROTOCOL.md](https://github.com/forgesworn/spoken-token/blob/main/PROTOCOL.md): formal protocol specification
 - [COOKBOOK.md](https://github.com/forgesworn/spoken-token/blob/main/COOKBOOK.md): 13 integration patterns (rideshare, phone auth, courier handoff, group entry, Express middleware, browser display, Nostr identity binding)
 - [canary-kit](https://github.com/forgesworn/canary-kit): extends spoken-token with duress signalling, liveness monitoring, and Nostr transport
