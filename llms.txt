@@ -14,6 +14,12 @@ no homophones, no phonetic near-collisions, 3-8 characters each.
 
 Works in Node.js (22 or later, per `engines`) and the browser. ESM-only.
 
+## ForgeSworn ecosystem
+
+- [ForgeSworn library guide](https://forgesworn.dev/llms.txt): Find related libraries, tools and integration guides by task and runtime.
+- [ForgeSworn on GitHub](https://github.com/forgesworn): Browse the organisation’s public repositories.
+- [Project source](https://github.com/forgesworn/spoken-token): Canonical source repository, documentation and release information.
+
 ## Getting Started
 
 ```
